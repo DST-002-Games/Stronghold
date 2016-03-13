@@ -1,0 +1,21 @@
+author: Krglok
+database: false
+description: Allows you to create regions that are protected and produce some items. This is a tool for Realms plugin.
+main: multitallented.redcastlemedia.bukkit.stronghold.Stronghold
+name: Stronghold
+startup: postworld
+version: 0.9.5.4
+depend: [Vault]
+softdepend: []
+commands:
+   herostrong:
+      aliases: ['stronghold', 'sh']
+      description: Stronghold commands
+      usage: /stronghold
+permissions:
+   stronghold.create.all:
+      description: Allows you to create a Stronghold of the predefined type if you have the necessary materials and money
+      default: op
+   stronghold.admin:
+      description: Lets you use admin commands
+      default: op

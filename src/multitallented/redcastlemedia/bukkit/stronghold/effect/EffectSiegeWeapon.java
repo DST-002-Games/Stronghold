@@ -1,0 +1,158 @@
+package multitallented.redcastlemedia.bukkit.stronghold.effect;
+
+import java.util.Date;
+import java.util.HashMap;
+import multitallented.redcastlemedia.bukkit.stronghold.Stronghold;
+import multitallented.redcastlemedia.bukkit.stronghold.effect.Effect;
+import multitallented.redcastlemedia.bukkit.stronghold.events.UpkeepEvent;
+import multitallented.redcastlemedia.bukkit.stronghold.region.Region;
+import multitallented.redcastlemedia.bukkit.stronghold.region.RegionType;
+import multitallented.redcastlemedia.bukkit.stronghold.region.SuperRegion;
+import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.Sign;
+import org.bukkit.entity.TNTPrimed;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+
+/**
+ *
+ * @author Multitallented
+ */
+public class EffectSiegeWeapon extends Effect {
+    private HashMap<Location, Long> lastUpkeep = new HashMap<Location, Long>();
+    
+    public EffectSiegeWeapon(Stronghold plugin) {
+        super(plugin);
+        registerEvent(new UpkeepListener(plugin, this));
+    }
+    
+    @Override
+    public void init(Stronghold plugin) {
+        super.init(plugin);
+    }
+    
+    public class UpkeepListener implements Listener {
+        private final EffectSiegeWeapon effect;
+        private final Stronghold plugin;
+        public UpkeepListener(Stronghold plugin, EffectSiegeWeapon effect) {
+            this.effect = effect;
+            this.plugin = plugin;
+        }
+        
+        
+        @EventHandler
+        public void onCustomEvent(UpkeepEvent event) {
+            Location l = event.getLocation();
+            Region r = getPlugin().getRegionManager().getRegion(event.getLocation());
+            if (r == null)
+                return;
+            RegionType rt = getPlugin().getRegionManager().getRegionType(r.getType()); 
+            
+            //Check if the region has the shoot arrow effect and return arrow velocity
+            long period = effect.regionHasEffect(rt.getEffects(), "siegeweapon");
+            if (period == 0) {
+                return;
+            }
+            
+            period *= 1000;            
+            
+            if (lastUpkeep.get(l) != null && period + lastUpkeep.get(l) > new Date().getTime()) {
+                return;
+            }
+            
+            //Check if valid siege machine position
+            if (l.getBlock().getRelative(BlockFace.UP).getY() < l.getWorld().getHighestBlockAt(l).getY()) {
+                return;
+            }
+            
+            //Check to see if the Stronghold has enough reagents
+            if (!effect.hasReagents(l)) {
+                return;
+            }
+            
+            Block b = l.getBlock().getRelative(BlockFace.UP);
+            if (!(b.getState() instanceof Sign)) {
+                return;
+            }
+            
+            //Find target Super-region
+            Sign sign = (Sign) b.getState();
+            String srName = sign.getLine(0);
+            SuperRegion sr = plugin.getRegionManager().getSuperRegion(srName);
+            if (sr == null) {
+                sign.setLine(2, "invalid name");
+                return;
+            }
+            //Check if too far away
+            int rawRadius = plugin.getRegionManager().getSuperRegionType(sr.getType()).getRawRadius();
+            try {
+                if (sr.getLocation().distance(l) - rawRadius >  150) {
+                    sign.setLine(2, "out of");
+                    sign.setLine(3, "range");
+                    return;
+                }
+            } catch (IllegalArgumentException iae) {
+                sign.setLine(2, "out of");
+                sign.setLine(3, "range");
+                return;
+            }
+            
+            //Run upkeep but don't need to know if upkeep occured
+            //effect.forceUpkeep(l);
+            effect.forceUpkeep(event);
+            lastUpkeep.put(l, new Date().getTime());
+            
+            Location spawnLoc = l.getBlock().getRelative(BlockFace.UP, 3).getLocation();
+            Location srLoc = sr.getLocation();
+            Location loc = new Location(spawnLoc.getWorld(), spawnLoc.getX(), spawnLoc.getY() + 15, spawnLoc.getZ());
+            final Location loc1 = new Location(spawnLoc.getWorld(), spawnLoc.getX(), spawnLoc.getY() + 20, spawnLoc.getZ());
+            final Location loc2 = new Location(spawnLoc.getWorld(), spawnLoc.getX(), spawnLoc.getY() + 25, spawnLoc.getZ());
+            final Location loc3 = new Location(spawnLoc.getWorld(), spawnLoc.getX(), spawnLoc.getY() + 30, spawnLoc.getZ());
+            TNTPrimed tnt = l.getWorld().spawn(loc, TNTPrimed.class);
+            tnt.setFuseTicks(1);
+            
+            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                TNTPrimed tnt = loc1.getWorld().spawn(loc1, TNTPrimed.class);
+                tnt.setFuseTicks(1);
+            }
+            }, 5L);
+            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                TNTPrimed tnt = loc2.getWorld().spawn(loc2, TNTPrimed.class);
+                tnt.setFuseTicks(1);
+            }
+            }, 10L);
+            
+            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                TNTPrimed tnt = loc3.getWorld().spawn(loc3, TNTPrimed.class);
+                tnt.setFuseTicks(1);
+            }
+            }, 15L);
+            
+            double randX = srLoc.getX() + Math.random()*rawRadius*(-1 * (int) (Math.random() + 0.5));
+            double randZ = srLoc.getZ() + Math.random()*rawRadius*(-1 * (int) (Math.random() + 0.5));
+            final Location endLoc = new Location(srLoc.getWorld(), randX, 240, randZ);
+            
+            plugin.getRegionManager().reduceRegion(sr);
+            if (sr.getPower() < 1 && plugin.getConfigManager().getDestroyNoPower()) {
+                event.setRegionsToDestroy(event.getRegionsToDestroy());
+            }
+            
+            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                TNTPrimed tnt = endLoc.getWorld().spawn(endLoc, TNTPrimed.class);
+                tnt.setFuseTicks(500);
+            }
+            }, 100L);
+        }
+    }
+    
+}
