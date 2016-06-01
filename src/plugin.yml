@@ -4,7 +4,7 @@ description: Allows you to create regions that are protected and produce some it
 main: multitallented.redcastlemedia.bukkit.stronghold.Stronghold
 name: Stronghold
 startup: postworld
-version: 0.9.5.4
+version: 0.9.5.6
 depend: [Vault]
 softdepend: []
 commands:

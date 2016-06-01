@@ -685,19 +685,24 @@ public class RegionManager
 		// Modification Exception
 		// You have to do that separately with removeRegion(Location l);
 		Region currentRegion = liveRegions.get(l);
+		if (currentRegion == null)
+		{
+			System.out.println("[Stronghold] Unable to destroy non-existent region ");
+			return;
+		}
 		File dataFile = new File(plugin.getDataFolder() + "/data",
 				currentRegion.getID() + ".yml");
 		if (!dataFile.exists())
 		{
 			System.out
-					.println("[Herostronghold] Unable to destroy non-existent region "
+					.println("[Stronghold] Unable to destroy non-existent region "
 							+ currentRegion.getID() + ".yml");
 			return;
 		}
 		if (!dataFile.delete())
 		{
 			System.out
-					.println("[Herostronghold] Unable to destroy non-existent region "
+					.println("[Stronghold] Unable to destroy non-existent region "
 							+ currentRegion.getID() + ".yml");
 			return;
 		} else
